@@ -1,4 +1,4 @@
-use_cuda = false
+use_cuda = true
 require 'torch'
 require 'nn'
 if (use_cuda) then
@@ -11,6 +11,8 @@ require 'rnn'
 require 'model'
 require 'data'
 require 'image'
+
+use_sgd = false
 
 model_sogou_lstm()
 -- model_weibo()
@@ -229,8 +231,11 @@ function train(batch_num)
 	star_num = 0
 	for i =1,batch_num do
 		evalCounter = evalCounter + 1
-		-- _, fs = optim.sgd(feval, x, sgd_params)
-		_, fs = optim.adadelta(feval, x, adadelta_params, state)
+		if (use_sgd == true) then
+			_, fs = optim.sgd(feval, x, sgd_params)
+		else
+			_, fs = optim.adadelta(feval, x, adadelta_params, state)
+		end
 		if (i % 1 == 0) then
 			local percent = math.floor(evalCounter % batch_num / batch_num * 100)
 			if (evalCounter % batch_num == 0) then
