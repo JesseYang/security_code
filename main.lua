@@ -12,7 +12,7 @@ require 'model'
 require 'data'
 require 'image'
 
-use_sgd = false
+use_sgd = true
 
 model_sogou_lstm()
 -- model_weibo()
@@ -204,7 +204,7 @@ end
 
 -- sgd parameters
 sgd_params = {
-	learningRate = 3e-5,
+	learningRate = 2e-4,
 	learningRateDecay = 0,
 	weightDecay = 0,
 	momentum = 0.9
@@ -223,6 +223,7 @@ train_err_rate = { }
 loss_epoch = { }
 
 evalCounter = 0
+epoch = 0
 function train(batch_num)
 	last_epoch = epoch or 0
 	star_num = star_num or 0
@@ -255,12 +256,11 @@ end
 function train_epoch(epoch_num, batch_size_param)
 	batch_size = batch_size_param or 1
 	local batch_num = math.floor(table.getn(imgs_train) / batch_size)
-	epoch = 1
 	for e = 1, epoch_num do
 		nClock = os.clock() 
+		epoch = epoch + 1
 		train(batch_num)
 
-		epoch = epoch + 1
 		shuffle(train_idx_ary)
 		train_idx = 1
 
@@ -271,14 +271,16 @@ function train_epoch(epoch_num, batch_size_param)
 		end
 		io.flush()
 		local loss_tensor = torch.Tensor(loss_ary)
-		local loss_cur_epoch = loss_tensor:sub((last_epoch - 1) * batch_num + 1, last_epoch * batch_num):mean()
+		local loss_cur_epoch = loss_tensor:sub((epoch - 1) * batch_num + 1, epoch * batch_num):mean()
 		io.write(". Ave loss: " .. loss_cur_epoch .. ".")
 		loss_epoch[epoch] = loss_cur_epoch
 		io.write(" Execution time: " .. elapse .. "s.")
 		io.write("\n")
 
 		-- save the model file
-		torch.save("models/" .. epoch .. ".mdl", m)
+		if (epoch % 5 == 1) then
+			torch.save("models/" .. epoch .. ".mdl", m)
+		end
 		calTestErrRate()
 	end
 end
@@ -290,4 +292,4 @@ function load_model(model_idx)
 end
 
 -- load_model(5)
--- train_epoch(500)
+train_epoch(500, 64)
