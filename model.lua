@@ -38,29 +38,65 @@ end
 function model_sogou_lstm()
 	-- the rnn model
 	use_rnn = true
+	use_pca = true
+	window = 1
 	label_set = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z" }
 	klass = table.getn(label_set) + 1
 	height = 44
 	channel = 3
 	feature_len = height * channel
+	pca_dim = height * channel
 	hidden_size = 200
 
-	fwd = nn.LSTM(feature_len, hidden_size)
-	fwdSeq = nn.Sequencer(fwd)
-	bwd = nn.LSTM(feature_len, hidden_size)
-	bwdSeq = nn.Sequencer(bwd)
-	merge = nn.JoinTable(1, 1)
-	mergeSeq = nn.Sequencer(merge)
+	l1_1 = nn.LSTM(feature_len, hidden_size)
+	l1_2 = nn.LSTM(feature_len, hidden_size)
 
-	concat = nn.ConcatTable()
-	concat:add(fwdSeq):add(nn.Sequential():add(nn.ReverseTable()):add(bwdSeq))
-	brnn = nn.Sequential()
-		:add(concat)
+	fwdSeq_1 = nn.Sequencer(l1_1)
+	bwdSeq_1 = nn.Sequencer(l1_2)
+	merge_1 = nn.JoinTable(1, 1)
+	mergeSeq_1 = nn.Sequencer(merge_1)
+
+	concat_1 = nn.ConcatTable()
+	concat_1:add(fwdSeq_1):add(nn.Sequential():add(nn.ReverseTable()):add(bwdSeq_1):add(nn.ReverseTable()))
+	brnn_1 = nn.Sequential()
+		:add(concat_1)
 		:add(nn.ZipTable())
-		:add(mergeSeq)
+		:add(mergeSeq_1)
+
+	l2_1 = nn.LSTM(2 * hidden_size, hidden_size)
+	l2_2 = nn.LSTM(2 * hidden_size, hidden_size)
+
+	fwdSeq_2 = nn.Sequencer(l2_1)
+	bwdSeq_2 = nn.Sequencer(l2_2)
+	merge_2 = nn.JoinTable(1, 1)
+	mergeSeq_2 = nn.Sequencer(merge_2)
+
+	concat_2 = nn.ConcatTable()
+	concat_2:add(fwdSeq_2):add(nn.Sequential():add(nn.ReverseTable()):add(bwdSeq_2):add(nn.ReverseTable()))
+	brnn_2 = nn.Sequential()
+		:add(concat_2)
+		:add(nn.ZipTable())
+		:add(mergeSeq_2)
+
+	l3_1 = nn.LSTM(2 * hidden_size, hidden_size)
+	l3_2 = nn.LSTM(2 * hidden_size, hidden_size)
+
+	fwdSeq_3 = nn.Sequencer(l3_1)
+	bwdSeq_3 = nn.Sequencer(l3_2)
+	merge_3 = nn.JoinTable(1, 1)
+	mergeSeq_3 = nn.Sequencer(merge_3)
+
+	concat_3 = nn.ConcatTable()
+	concat_3:add(fwdSeq_3):add(nn.Sequential():add(nn.ReverseTable()):add(bwdSeq_3):add(nn.ReverseTable()))
+	brnn_3 = nn.Sequential()
+		:add(concat_3)
+		:add(nn.ZipTable())
+		:add(mergeSeq_3)
 
 	rnn = nn.Sequential()
-		:add(brnn) 
+		:add(brnn_1)
+		:add(brnn_2)
+		:add(brnn_3)
 		:add(nn.Sequencer(nn.Linear(hidden_size * 2, klass), 1)) -- times two due to JoinTable
 
 	s = use_cuda == true and rnn:cuda() or rnn

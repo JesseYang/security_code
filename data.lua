@@ -10,6 +10,60 @@ require 'util'
 
 data_src = "sogou"
 
+function train_set_pca(w, dim, whiten)
+        -- 1. get table of feature vectors
+        local features = { }
+        local height = imgs_train[1]:size(1)
+	local channel = imgs_train[1]:size(3)
+        w = w or window
+        local idx = 1
+        local ori_dim = height * w * channel
+        for i = 1, table.getn(imgs_train) do
+                local width = imgs_train[i]:size(2)
+                for c = 1, width - w + 1 do
+                        feature = imgs_train[i]:sub(1, height, c, c + w - 1, 1, channel):reshape(1, ori_dim)
+                        features[idx] = feature
+                        idx = idx + 1
+                end
+        end
+        local features_tensor = torch.zeros(table.getn(features), ori_dim)
+        for i = 1, table.getn(features) do
+                features_tensor[i] = features[i][1]
+        end
+
+        -- 2. preprocess for the features
+        dim = dim or pca_dim
+        whiten = whiten or false
+        pca_transform = pca(features_tensor, dim, whiten)
+
+        return pca_transform
+end
+
+function pca(d, dim, whiten)
+        mean_over_dim = torch.mean(d, 1)
+        d_m = d - torch.ger(torch.ones(d:size(1)), mean_over_dim:squeeze())
+        cov = d_m:t() * d_m
+        ce, cvv = torch.symeig(cov, 'V')
+        -- sort eigenvalues
+        ce, idx = torch.sort(ce, true)
+        -- sort eigenvectors
+        cvv = cvv:index(2, idx:long())
+
+        print(ce:sub(1, dim):sum() / ce:sum())
+        t = cvv:sub(1, -1, 1, dim)
+        ce = ce:sub(1, dim)
+        pca_data = d_m * t
+        whiten_factor = torch.diag(ce:clone():sqrt():pow(-1))
+        v1 = torch.var(pca_data:sub(1, -1, 1, 1))
+        whiten_factor = whiten_factor * torch.sqrt(1/(v1 * whiten_factor[1][1]^2))
+        sigma = torch.sqrt(torch.var(pca_data))
+        if (whiten == true) then
+                return t * whiten_factor
+        else
+                return t / sigma
+        end
+end
+
 function get_label_by_str(label_str)
 	char_idx = 1
 	local result = { }
@@ -39,6 +93,9 @@ function load_data()
 			labels_str_type[type_idx] = string.lower(label)
 			labels_type[type_idx] = get_label_by_str(string.lower(label))
 			type_idx = type_idx + 1
+		end
+		if (type_idx == 11) then
+			break
 		end
 	end
 
@@ -93,17 +150,23 @@ function extractFeature(imgs)
 	local mean = 123
 
 	local featureTable = { }
-	for i = 1, width do
-		local feature = torch.Tensor(img_num, feature_len):fill(0)
-		feature = use_cuda and feature:cuda() or feature
+	for i = 1, width - window + 1 do
+		local feature = torch.zeros(img_num, feature_len)
+
 		for n = 1, img_num do
-			for j = 1, height do
-				for c = 1, channel do
-       		                 	feature[n][(j - 1) * channel + c] = imgs[n][j][i][c]
-				end
-			end
+			feature[n] = imgs[n]:sub(1, height, i, i + window - 1, 1, channel):reshape(1, feature_len)
 		end
-		featureTable[i] = (feature - mean) / 255
+
+		if (use_pca == true) then
+			for n = 1, img_num do
+				feature[n] = feature[n] - mean_over_dim
+			end
+			featureTable[i] = feature * pca_transform
+		else
+			feature = (feature / 255) - 0.5
+			featureTable[i] = feature
+		end
+		featureTable[i] = use_cuda and featureTable[i]:cuda() or featureTable[i]
 	end
 	return featureTable
 end

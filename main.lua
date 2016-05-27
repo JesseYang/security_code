@@ -21,6 +21,9 @@ c = use_cuda == true and nn.CTCCriterion():cuda() or nn.CTCCriterion()
 -- Prepare the data
 load_training_data()
 load_test_data()
+if (use_pca) then
+        train_set_pca()
+end
 
 function recognize(img)
 
@@ -278,10 +281,10 @@ function train_epoch(epoch_num, batch_size_param)
 		io.write("\n")
 
 		-- save the model file
-		if (epoch % 5 == 1) then
-			torch.save("models/" .. epoch .. ".mdl", m)
-		end
-		calTestErrRate()
+		-- if (epoch % 5 == 1) then
+		-- 	torch.save("models/" .. epoch .. ".mdl", m)
+		-- end
+		-- calTestErrRate()
 	end
 end
 
@@ -292,4 +295,4 @@ function load_model(model_idx)
 end
 
 -- load_model(5)
-train_epoch(500, 64)
+-- train_epoch(500, 64)
