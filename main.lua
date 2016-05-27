@@ -1,4 +1,4 @@
-use_cuda = true
+use_cuda = false
 require 'torch'
 require 'nn'
 if (use_cuda) then
@@ -12,7 +12,7 @@ require 'model'
 require 'data'
 require 'image'
 
-use_sgd = true
+use_sgd = false
 
 model_sogou_lstm()
 -- model_weibo()
@@ -22,7 +22,7 @@ c = use_cuda == true and nn.CTCCriterion():cuda() or nn.CTCCriterion()
 load_training_data()
 load_test_data()
 if (use_pca) then
-        train_set_pca()
+	train_set_pca()
 end
 
 function recognize(img)

@@ -92,9 +92,10 @@ function load_data()
 			imgs_type[type_idx] = raw_img
 			labels_str_type[type_idx] = string.lower(label)
 			labels_type[type_idx] = get_label_by_str(string.lower(label))
+			imgs_pathname_ary_type[type_idx] = img_filename
 			type_idx = type_idx + 1
 		end
-		if (type_idx == 11) then
+		if (type_idx == 13) then
 			break
 		end
 	end
@@ -112,11 +113,13 @@ function load_training_data()
 	labels_train = { }
 	labels_str_train = { }
 	train_idx_ary = { }
+	imgs_pathname_ary_train = { }
 
 	imgs_type = imgs_train
 	labels_type = labels_train
 	labels_str_type = labels_str_train
 	type_idx_ary = train_idx_ary
+	imgs_pathname_ary_type = imgs_pathname_ary_train
 	type_str = "training"
 
 	load_data()
@@ -129,11 +132,13 @@ function load_test_data()
 	labels_test = { }
 	labels_str_test = { }
 	test_idx_ary = { }
+	imgs_pathname_ary_test = { }
 
 	imgs_type = imgs_test
 	labels_type = labels_test
 	labels_str_type = labels_str_test
 	type_idx_ary = test_idx_ary
+	imgs_pathname_ary_type = imgs_pathname_ary_test
 	type_str = "test"
 
 	load_data()
